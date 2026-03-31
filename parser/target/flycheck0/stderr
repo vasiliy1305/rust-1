@@ -1,35 +1,12 @@
-   0.013367500s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: fingerprint error for parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser)/Check { test: false }/TargetInner { name: "parser", doc: true, ..: with_path("C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\main.rs", Edition2024) }
-   0.013420700s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Admin\Desktop\RUST\rust-1\parser\target\debug\.fingerprint\parser-4a85f0205f0edfc8\bin-parser`
-
-Caused by:
-    Не удается найти указанный файл. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_libgit2_prerelease
-  12: <unknown>
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: git_midx_writer_dump
-  17: git_filter_source_repo
-  18: git_midx_writer_dump
-  19: BaseThreadInitThunk
-  20: RtlUserThreadStart
-   0.022185100s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\main.rs"
-   0.022205300s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:           (vs) "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\target\\debug\\.fingerprint\\parser-6d5cdef63a0b62dd\\dep-test-bin-parser"
-   0.022211900s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13419417383, nanos: 532587100 } < FileTime { seconds: 13419417555, nanos: 623217400 }
-   0.022421300s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: fingerprint dirty for parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser)/Check { test: true }/TargetInner { name: "parser", doc: true, ..: with_path("C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\main.rs", Edition2024) }
-   0.022451500s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\target\\debug\\.fingerprint\\parser-6d5cdef63a0b62dd\\dep-test-bin-parser", reference_mtime: FileTime { seconds: 13419417383, nanos: 532587100 }, stale: "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\main.rs", stale_mtime: FileTime { seconds: 13419417555, nanos: 623217400 } }))
+   0.012633400s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\lib.rs"
+   0.012663200s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:           (vs) "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\target\\debug\\.fingerprint\\parser-dbef8f72841f887b\\dep-lib-parser"
+   0.012670500s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13419459265, nanos: 705798500 } < FileTime { seconds: 13419459443, nanos: 974200500 }
+   0.012825400s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: fingerprint dirty for parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("parser", ["lib"], "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\lib.rs", Edition2024) }
+   0.012882600s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\target\\debug\\.fingerprint\\parser-dbef8f72841f887b\\dep-lib-parser", reference_mtime: FileTime { seconds: 13419459265, nanos: 705798500 }, stale: "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\lib.rs", stale_mtime: FileTime { seconds: 13419459443, nanos: 974200500 } }))
+   0.013604000s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\lib.rs"
+   0.013616200s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:           (vs) "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\target\\debug\\.fingerprint\\parser-d355e0509e9fe2c3\\dep-test-lib-parser"
+   0.013622200s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13419459265, nanos: 705798500 } < FileTime { seconds: 13419459443, nanos: 974200500 }
+   0.013733400s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint: fingerprint dirty for parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("parser", ["lib"], "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\lib.rs", Edition2024) }
+   0.013752700s  INFO prepare_target{force=false package_id=parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser) target="parser"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\target\\debug\\.fingerprint\\parser-d355e0509e9fe2c3\\dep-test-lib-parser", reference_mtime: FileTime { seconds: 13419459265, nanos: 705798500 }, stale: "C:\\Users\\Admin\\Desktop\\RUST\\rust-1\\parser\\src\\lib.rs", stale_mtime: FileTime { seconds: 13419459443, nanos: 974200500 } }))
     Checking parser v0.1.0 (C:\Users\Admin\Desktop\RUST\rust-1\parser)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s
