@@ -1,7 +1,5 @@
-use std::io::{BufReader, Error};
-
-use crate::{LoadData, ParserError, Transaction};
-use thiserror::Error;
+use crate::error::{CsvError, ParserError};
+use crate::{LoadData, Transaction, TxType, Status};
 
 const HEADER: [&str; 8] = [
     "TX_ID",
@@ -14,30 +12,13 @@ const HEADER: [&str; 8] = [
     "DESCRIPTION",
 ];
 
-// csv_format.rs — логика и типы для csv формата.
-#[derive(Debug, Error)]
-pub enum CsvError {
-    #[error("Invalid column count, expected '{expected}', got '{actual}'")]
-    InvalidLength { expected: usize, actual: usize },
-
-    #[error("wrong column at index {index}: expected '{expected}', got '{actual}'")]
-    WrongColumn {
-        index: usize,
-        expected: String,
-        actual: String,
-    },
-
-    #[error("parse int error: {0}")]
-    ParseInt(#[from] std::num::ParseIntError),
-}
-
 struct CsvFormat;
 
 impl LoadData for CsvFormat {
     fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<Transaction>, ParserError> {
         let mut content = String::new();
         reader.read_to_string(&mut content)?;
-        let mut resualt = Vec::<Transaction>::new();
+        let mut resalt = Vec::<Transaction>::new();
 
         let mut is_header = true;
         for line in content.lines() {
@@ -45,36 +26,24 @@ impl LoadData for CsvFormat {
                 check_header(line)?;
                 is_header = false;
             } else {
-                resualt.push(parse_line(line)?);
+                resalt.push(parse_line(line)?);
             }
         }
-        Ok(resualt)
+        Ok(resalt)
     }
 }
 
 fn check_header(header: &str) -> Result<(), CsvError> {
-    let expected_header: [&str; 8] = [
-        "TX_ID",
-        "TX_TYPE",
-        "FROM_USER_ID",
-        "TO_USER_ID",
-        "AMOUNT",
-        "TIMESTAMP",
-        "STATUS",
-        "DESCRIPTION",
-    ];
-
     let actual_header: Vec<&str> = header.split(',').collect();
 
-    if expected_header.len() != actual_header.len() {
+    if HEADER.len() != actual_header.len() {
         return Err(CsvError::InvalidLength {
-            expected: expected_header.len(),
+            expected: HEADER.len(),
             actual: actual_header.len(),
         });
     }
 
-    for (index, (expected, actual)) in expected_header.iter().zip(actual_header.iter()).enumerate()
-    {
+    for (index, (expected, actual)) in HEADER.iter().zip(actual_header.iter()).enumerate() {
         if expected.trim() != actual.trim() {
             return Err(CsvError::WrongColumn {
                 index: index,
@@ -98,9 +67,9 @@ fn parse_line(line: &str) -> Result<Transaction, CsvError> {
     let tx_id = parts[0].trim().parse::<u64>()?;
 
     let tx_type = match parts[1].trim() {
-        "DEPOSIT" => crate::TxType::DEPOSIT,
-        "TRANSFER" => crate::TxType::TRANSFER,
-        "WITHDRAWAL" => crate::TxType::WITHDRAWAL,
+        "DEPOSIT" => TxType::DEPOSIT,
+        "TRANSFER" => TxType::TRANSFER,
+        "WITHDRAWAL" => TxType::WITHDRAWAL,
         _ => {
             return Err(CsvError::WrongColumn {
                 index: 1,
@@ -116,9 +85,9 @@ fn parse_line(line: &str) -> Result<Transaction, CsvError> {
     let timestamp = parts[5].trim().parse::<u64>()?;
 
     let status = match parts[6].trim() {
-        "SUCCESS" => crate::Status::SUCCESS,
-        "FAILURE" => crate::Status::FAILURE,
-        "PENDING" => crate::Status::PENDING,
+        "SUCCESS" => Status::SUCCESS,
+        "FAILURE" => Status::FAILURE,
+        "PENDING" => Status::PENDING,
         _ => {
             return Err(CsvError::WrongColumn {
                 index: 6,
@@ -188,12 +157,12 @@ mod tests {
             tx,
             Transaction {
                 tx_id: 1000000000000017,
-                tx_type: crate::TxType::WITHDRAWAL,
+                tx_type: TxType::WITHDRAWAL,
                 from_user_id: 9223372036854775807,
                 to_user_id: 0,
                 amount: 1800,
                 timestamp: 1633037880000,
-                status: crate::Status::SUCCESS,
+                status: Status::SUCCESS,
                 description: "Record number 18".to_string(),
             }
         );
