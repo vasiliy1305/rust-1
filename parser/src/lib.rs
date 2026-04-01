@@ -1,40 +1,41 @@
 pub mod csv_format;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+enum ParserError {
+    #[error("csv error: {0}")]
+    Csv(#[from] csv_format::CsvError),
+
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
+}
+
 use std::io::Read;
 
-enum TX_TYPE {
+#[derive(Debug, PartialEq)]
+enum TxType {
     DEPOSIT,
     TRANSFER,
     WITHDRAWAL,
 }
 
-enum STATUS {
+#[derive(Debug, PartialEq)]
+enum Status {
     SUCCESS,
     FAILURE,
     PENDING,
 }
+
+#[derive(Debug, PartialEq)]
 struct Transaction {
     tx_id: u64,
-    tx_type: TX_TYPE,
+    tx_type: TxType,
     from_user_id: u64,
     to_user_id: u64,
+    amount: u64,
     timestamp: u64,
-    status: STATUS,
+    status: Status,
     description: String,
-}
-
-enum CsvError {
-    InvalidLength {
-        expected: usize,
-        actual: usize,
-    },
-    WrongColumn {
-        index: usize,
-        expected: String,
-        actual: String,
-    },
-}
-enum ParserError {
-    Csv(CsvError),
 }
 
 trait LoadData {
