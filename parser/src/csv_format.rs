@@ -48,7 +48,7 @@ impl SaveData for CsvFormat {
 
 fn transaction_to_str(tx: &Transaction) -> String {
     format!(
-        "{},{:?},{},{},{},{},{:?},\"{}", // не совсем хорошо так делать
+        "{},{:?},{},{},{},{},{:?},\"{}\"", // не совсем хорошо так делать
         tx.tx_id,
         tx.tx_type,
         tx.from_user_id,
@@ -80,6 +80,13 @@ fn check_header(header: &str) -> Result<(), CsvError> {
         }
     }
     Ok(())
+}
+
+fn trim_quotes(s: &str) -> &str {
+    let s = s.trim();
+    let s = s.strip_prefix('"').unwrap_or(s);
+    let s = s.strip_suffix('"').unwrap_or(s);
+    s
 }
 
 fn parse_line(line: &str) -> Result<Transaction, CsvError> {
@@ -124,7 +131,7 @@ fn parse_line(line: &str) -> Result<Transaction, CsvError> {
         }
     };
 
-    let description = parts[7].to_string();
+    let description = trim_quotes(parts[7]).to_string();
 
     Ok(Transaction {
         tx_id,
@@ -198,7 +205,7 @@ mod tests {
     #[test]
     fn test_parse_line() {
         let result = parse_line(
-            "1000000000000017,WITHDRAWAL,9223372036854775807,0,1800,1633037880000,SUCCESS,Record number 18",
+            "1000000000000017,WITHDRAWAL,9223372036854775807,0,1800,1633037880000,SUCCESS,\"Record number 18\"",
         );
 
         assert!(result.is_ok());
@@ -220,7 +227,7 @@ mod tests {
         );
 
         let result = parse_line(
-            "1000000000000017,WITHDRAWAL,9223372036854775807,0,1800,1633037880000,Record number 18",
+            "1000000000000017,WITHDRAWAL,9223372036854775807,0,1800,1633037880000,\"Record number 18\"",
         );
 
         match result {
