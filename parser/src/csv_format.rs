@@ -1,5 +1,8 @@
 use crate::error::{CsvError, ParserError};
-use crate::{LoadData, Transaction, TxType, Status};
+use crate::{LoadData, SaveData, Status, Transaction, TxType};
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 const HEADER: [&str; 8] = [
     "TX_ID",
@@ -12,7 +15,7 @@ const HEADER: [&str; 8] = [
     "DESCRIPTION",
 ];
 
-struct CsvFormat;
+pub struct CsvFormat;
 
 impl LoadData for CsvFormat {
     fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<Transaction>, ParserError> {
@@ -31,6 +34,30 @@ impl LoadData for CsvFormat {
         }
         Ok(resalt)
     }
+}
+
+impl SaveData for CsvFormat {
+    fn save<W: std::io::Write>(writer: &mut W, data: &Vec<Transaction>) -> Result<(), ParserError> {
+        writeln!(writer, "{}", HEADER.join(","))?;
+        for tx in data {
+            writeln!(writer, "{}", transaction_to_str(tx));
+        }
+        Ok(())
+    }
+}
+
+fn transaction_to_str(tx: &Transaction) -> String {
+    format!(
+        "{},{:?},{},{},{},{},{:?},\"{}", // не совсем хорошо так делать
+        tx.tx_id,
+        tx.tx_type,
+        tx.from_user_id,
+        tx.to_user_id,
+        tx.amount,
+        tx.timestamp,
+        tx.status,
+        tx.description
+    )
 }
 
 fn check_header(header: &str) -> Result<(), CsvError> {
@@ -114,6 +141,31 @@ fn parse_line(line: &str) -> Result<Transaction, CsvError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_transaction_to_str() {
+        let tx = Transaction {
+            tx_id: 1000000000000000,
+            tx_type: TxType::DEPOSIT,
+            from_user_id: 0,
+            to_user_id: 9223372036854775807,
+            amount: 100,
+            timestamp: 1633036860000,
+            status: Status::FAILURE,
+            description: "Record number 1".to_string(),
+        };
+
+        assert_eq!(transaction_to_str(&tx), "1000000000000000,DEPOSIT,0,9223372036854775807,100,1633036860000,FAILURE,\"Record number 1\"".to_string())
+    }
+
+    // #[test]
+    // fn test_load_save_data(){
+    //     let mut file = File::open("C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example.csv").unwrap();
+    //     let reader = BufReader::new(file);
+    //     let data = CsvFormat::load(reader);
+
+    //     println!("{:?}", data);
+    // }
 
     #[test]
     fn test_check_header() {

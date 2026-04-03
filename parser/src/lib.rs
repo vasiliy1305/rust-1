@@ -11,6 +11,12 @@ pub enum TxType {
     WITHDRAWAL,
 }
 
+// impl std::fmt::Display for TxType {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+
+//     }
+// }
+
 #[derive(Debug, PartialEq)]
 pub enum Status {
     SUCCESS,
