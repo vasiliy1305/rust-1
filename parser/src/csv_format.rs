@@ -1,5 +1,5 @@
 use crate::error::{CsvError, ParserError};
-use crate::{LoadData, SaveData, Status, Transaction, TxType};
+use crate::{LoadData, SaveData, Status, Transaction, TxType, trim_quotes};
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -20,7 +20,7 @@ pub struct CsvFormat;
 impl LoadData for CsvFormat {
     fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<Transaction>, ParserError> {
         let mut content = String::new();
-        reader.read_to_string(&mut content)?;
+        reader.read_to_string(&mut content)?; // todo fix 
         let mut resalt = Vec::<Transaction>::new();
 
         let mut is_header = true;
@@ -42,13 +42,14 @@ impl SaveData for CsvFormat {
         for tx in data {
             writeln!(writer, "{}", transaction_to_str(tx));
         }
+        writer.flush();
         Ok(())
     }
 }
 
 fn transaction_to_str(tx: &Transaction) -> String {
     format!(
-        "{},{:?},{},{},{},{},{:?},\"{}\"", // не совсем хорошо так делать
+        "{},{},{},{},{},{},{},\"{}\"", // не совсем хорошо так делать
         tx.tx_id,
         tx.tx_type,
         tx.from_user_id,
@@ -80,13 +81,6 @@ fn check_header(header: &str) -> Result<(), CsvError> {
         }
     }
     Ok(())
-}
-
-fn trim_quotes(s: &str) -> &str {
-    let s = s.trim();
-    let s = s.strip_prefix('"').unwrap_or(s);
-    let s = s.strip_suffix('"').unwrap_or(s);
-    s
 }
 
 fn parse_line(line: &str) -> Result<Transaction, CsvError> {
