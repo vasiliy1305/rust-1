@@ -18,7 +18,7 @@ fn read_u64<R: std::io::Read>(reader: &mut R) -> Result<u64, std::io::Error> {
     Ok(u64::from_be_bytes(buffer))
 }
 
-fn read_string<R: std::io::Read>(reader: &mut R, size: usize) -> Result<String, ParserError> {
+fn read_string<R: std::io::Read>(reader: &mut R, size: u32) -> Result<String, ParserError> {
 let mut buffer = vec![0u8; size];
 reader.read_exact(&mut buffer)?;
     Ok(String::from_utf8(buffer)?)
@@ -60,6 +60,9 @@ fn read_body<R: std::io::Read>(reader: &mut R) ->Result<Transaction, BinError>
         value => {return Err(BinError::WrongStatus  { value: value });}
     };
     let desk_len = read_u32(reader)?;
+    let description  = read_string(reader, desk_len)?;
+
+    Ok(Transaction { tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description })
 }
 
 
