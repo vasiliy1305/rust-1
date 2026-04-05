@@ -1,6 +1,7 @@
 pub mod csv_format;
 pub mod error;
 pub mod txt_format;
+pub mod bin_format;
 
 use std::fmt::write;
 
