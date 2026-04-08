@@ -1,15 +1,15 @@
-use std::io::{ BufReader, BufWriter,  Write};
+use std::io::{BufReader, BufWriter, Write};
 
 use crate::error::{BinError, ParserError};
-use crate::{LoadData, SaveData, Status, Transaction, TxType};
+use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
 
 const MAGIC: [u8; 4] = [0x59, 0x50, 0x42, 0x4E];
 const MAGIC_U32: u32 = u32::from_be_bytes(MAGIC);
 
-pub struct BinFormat;
+pub struct YPBankBinFormat;
 
-impl LoadData for BinFormat {
-    fn load<R: std::io::Read>(reader: R) -> Result<Vec<Transaction>, ParserError> {
+impl FormatReader for YPBankBinFormat {
+    fn load<R: std::io::Read>(reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
         let mut reader = BufReader::new(reader);
         let mut result = Vec::new();
 
@@ -25,8 +25,8 @@ impl LoadData for BinFormat {
     }
 }
 
-impl SaveData for BinFormat {
-    fn save<W: std::io::Write>(writer: &mut W, data: &Vec<Transaction>) -> Result<(), ParserError> {
+impl FormatWriter for YPBankBinFormat {
+    fn save<W: std::io::Write>(writer: &mut W, data: &[YPBankRecord]) -> Result<(), ParserError> {
         let mut writer = BufWriter::new(writer);
         for tx in data {
             save_tx(&mut writer, tx)?;
@@ -51,10 +51,10 @@ fn status_to_byte(status: &Status) -> u8 {
     }
 }
 
-fn save_tx<W: Write>(writer: &mut W, tx: &Transaction) -> Result<(), ParserError> {
-    let desk_byte = tx.description.as_bytes();
-    let desk_len = desk_byte.len() as u32;
-    let size: u32 = desk_len + // DESCRIPTION
+fn save_tx<W: Write>(writer: &mut W, tx: &YPBankRecord) -> Result<(), ParserError> {
+    let desc_byte = tx.description.as_bytes();
+    let desc_len = desc_byte.len() as u32;
+    let size: u32 = desc_len + // DESCRIPTION
                             8 + // TX_ID
                             1 + // TX_TYPE
                             8+// FROM_USER_ID
@@ -73,8 +73,8 @@ fn save_tx<W: Write>(writer: &mut W, tx: &Transaction) -> Result<(), ParserError
     writer.write_all(&tx.amount.to_be_bytes())?;
     writer.write_all(&tx.timestamp.to_be_bytes())?;
     writer.write_all(&status_to_byte(&tx.status).to_be_bytes())?;
-    writer.write_all(&desk_len.to_be_bytes())?;
-    writer.write_all(&desk_byte)?;
+    writer.write_all(&desc_len.to_be_bytes())?;
+    writer.write_all(&desc_byte)?;
     Ok(())
 }
 
@@ -122,7 +122,7 @@ fn try_read_header<R: std::io::Read>(reader: &mut R) -> Result<Option<u32>, Pars
     Ok(Some(record_size))
 }
 
-fn read_body<R: std::io::Read>(reader: &mut R) -> Result<Transaction, ParserError> {
+fn read_body<R: std::io::Read>(reader: &mut R) -> Result<YPBankRecord, ParserError> {
     let tx_id = read_u64(reader)?;
     let tx_type = match read_u8(reader)? {
         0 => TxType::DEPOSIT,
@@ -144,10 +144,10 @@ fn read_body<R: std::io::Read>(reader: &mut R) -> Result<Transaction, ParserErro
             return Err(ParserError::Bin(BinError::WrongStatus { value: value }));
         }
     };
-    let desk_len = read_u32(reader)?;
-    let description = read_string(reader, desk_len)?;
+    let desc_len = read_u32(reader)?;
+    let description = read_string(reader, desc_len)?;
 
-    Ok(Transaction {
+    Ok(YPBankRecord {
         tx_id,
         tx_type,
         from_user_id,

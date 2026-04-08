@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 
-use parser::bin_format::BinFormat;
+// use parser::bin_format::BinFormat;
 // use parser::txt_format::TxtFormat;
-use parser::{LoadData, SaveData, Transaction, csv_format::CsvFormat};
+use parser::{FormatReader, FormatWriter, YPBankRecord};
 
 fn main() {
     // let mut file =
@@ -36,14 +36,14 @@ fn main() {
     // let mut writer = BufWriter::new(file);
     // TxtFormat::save(&mut writer, &data);
 
-    let file =
-        File::open("C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example.bin").unwrap();
-    let mut reader = BufReader::new(file);
-    let data = BinFormat::load(&mut reader).unwrap();
+    // let file =
+    //     File::open("C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example.bin").unwrap();
+    // let mut reader = BufReader::new(file);
+    // let data = BinFormat::load(&mut reader).unwrap();
 
-    let file =
-        File::create("C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example_copy.bin")
-            .unwrap();
-    let mut writer = BufWriter::new(file);
-    _ = BinFormat::save(&mut writer, &data);
+    // let file =
+    //     File::create("C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example_copy.bin")
+    //         .unwrap();
+    // let mut writer = BufWriter::new(file);
+    // _ = BinFormat::save(&mut writer, &data);
 }

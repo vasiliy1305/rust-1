@@ -1,5 +1,6 @@
 use crate::error::{CsvError, ParserError};
-use crate::{LoadData, SaveData, Status, Transaction, TxType, trim_quotes};
+use crate::utils::trim_quotes;
+use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
 
 // use std::fs::File;
 // use std::io::{BufRead, BufReader};
@@ -15,13 +16,13 @@ const HEADER: [&str; 8] = [
     "DESCRIPTION",
 ];
 
-pub struct CsvFormat;
+pub struct YPBankCsvFormat;
 
-impl LoadData for CsvFormat {
-    fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<Transaction>, ParserError> {
+impl FormatReader for YPBankCsvFormat {
+    fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
         let mut content = String::new();
         reader.read_to_string(&mut content)?; // todo fix 
-        let mut resalt = Vec::<Transaction>::new();
+        let mut result = Vec::<YPBankRecord>::new();
 
         let mut is_header = true;
         for line in content.lines() {
@@ -29,15 +30,15 @@ impl LoadData for CsvFormat {
                 check_header(line)?;
                 is_header = false;
             } else {
-                resalt.push(parse_line(line)?);
+                result.push(parse_line(line)?);
             }
         }
-        Ok(resalt)
+        Ok(result)
     }
 }
 
-impl SaveData for CsvFormat {
-    fn save<W: std::io::Write>(writer: &mut W, data: &Vec<Transaction>) -> Result<(), ParserError> {
+impl FormatWriter for YPBankCsvFormat {
+    fn save<W: std::io::Write>(writer: &mut W, data: &[YPBankRecord]) -> Result<(), ParserError> {
         writeln!(writer, "{}", HEADER.join(","))?;
         for tx in data {
             writeln!(writer, "{}", transaction_to_str(tx))?;
@@ -47,7 +48,7 @@ impl SaveData for CsvFormat {
     }
 }
 
-fn transaction_to_str(tx: &Transaction) -> String {
+fn transaction_to_str(tx: &YPBankRecord) -> String {
     format!(
         "{},{},{},{},{},{},{},\"{}\"", // не совсем хорошо так делать
         tx.tx_id,
@@ -83,7 +84,7 @@ fn check_header(header: &str) -> Result<(), CsvError> {
     Ok(())
 }
 
-fn parse_line(line: &str) -> Result<Transaction, CsvError> {
+fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
     let parts: Vec<&str> = line.split(',').collect();
     if parts.len() != HEADER.len() {
         return Err(CsvError::InvalidLength {
@@ -127,7 +128,7 @@ fn parse_line(line: &str) -> Result<Transaction, CsvError> {
 
     let description = trim_quotes(parts[7]).to_string();
 
-    Ok(Transaction {
+    Ok(YPBankRecord {
         tx_id,
         tx_type,
         from_user_id,
@@ -145,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_transaction_to_str() {
-        let tx = Transaction {
+        let tx = YPBankRecord {
             tx_id: 1000000000000000,
             tx_type: TxType::DEPOSIT,
             from_user_id: 0,
@@ -208,7 +209,7 @@ mod tests {
 
         assert_eq!(
             tx,
-            Transaction {
+            YPBankRecord {
                 tx_id: 1000000000000017,
                 tx_type: TxType::WITHDRAWAL,
                 from_user_id: 9223372036854775807,

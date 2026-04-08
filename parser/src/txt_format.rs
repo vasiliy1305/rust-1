@@ -1,10 +1,10 @@
 use std::io::{BufRead, BufReader};
 
-
 use crate::error::{ParserError, TxtError};
-use crate::{LoadData, SaveData, Status, Transaction, TxType, trim_quotes};
+use crate::utils::trim_quotes;
+use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
 
-pub struct TxtFormat;
+pub struct YPBankTxtFormat;
 
 #[derive(Default)]
 struct TransactionDraft {
@@ -19,8 +19,8 @@ struct TransactionDraft {
 }
 
 impl TransactionDraft {
-    fn build(self) -> Result<Transaction, TxtError> {
-        Ok(Transaction {
+    fn build(self) -> Result<YPBankRecord, TxtError> {
+        Ok(YPBankRecord {
             tx_id: self.tx_id.ok_or(TxtError::MissingField {
                 field: "TX_ID".into(),
             })?,
@@ -49,11 +49,11 @@ impl TransactionDraft {
     }
 }
 
-impl LoadData for TxtFormat {
-    fn load<R: std::io::Read>(reader: R) -> Result<Vec<Transaction>, ParserError> {
+impl FormatReader for YPBankTxtFormat {
+    fn load<R: std::io::Read>(reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
         let reader = BufReader::new(reader);
 
-        let mut resualt = Vec::<Transaction>::new();
+        let mut result = Vec::<YPBankRecord>::new();
 
         let mut tx = TransactionDraft::default();
 
@@ -74,17 +74,17 @@ impl LoadData for TxtFormat {
                 },
                 TxtLineType::Empty => {
                     // что если несколько пустых строк подрят или пустая строка на первом месте? можно ввести флаг на этот случай
-                    resualt.push(tx.build()?);
+                    result.push(tx.build()?);
                     tx = TransactionDraft::default();
                 }
             }
         }
-        Ok(resualt)
+        Ok(result)
     }
 }
 
-impl SaveData for TxtFormat {
-    fn save<W: std::io::Write>(writer: &mut W, data: &Vec<Transaction>) -> Result<(), ParserError> {
+impl FormatWriter for YPBankTxtFormat {
+    fn save<W: std::io::Write>(writer: &mut W, data: &[YPBankRecord]) -> Result<(), ParserError> {
         for tx in data {
             writeln!(
                 writer,
@@ -183,6 +183,7 @@ fn get_line_type(line: &str) -> Result<TxtLineType, TxtError> {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
