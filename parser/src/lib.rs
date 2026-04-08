@@ -3,10 +3,9 @@ pub mod csv_format;
 pub mod error;
 pub mod txt_format;
 
-use std::fmt::write;
 
 use error::ParserError;
-// use std::io::Read;
+
 
 #[derive(Debug, PartialEq)]
 pub enum TxType {

@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{ BufReader, BufWriter,  Write};
 
 use crate::error::{BinError, ParserError};
 use crate::{LoadData, SaveData, Status, Transaction, TxType};

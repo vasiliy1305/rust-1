@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter};
 
 use parser::bin_format::BinFormat;
-use parser::txt_format::TxtFormat;
+// use parser::txt_format::TxtFormat;
 use parser::{LoadData, SaveData, Transaction, csv_format::CsvFormat};
 
 fn main() {

@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader};
 
-// txt_format.rs — логика и типы для текстового формата.
+
 use crate::error::{ParserError, TxtError};
 use crate::{LoadData, SaveData, Status, Transaction, TxType, trim_quotes};
 
@@ -50,7 +50,7 @@ impl TransactionDraft {
 }
 
 impl LoadData for TxtFormat {
-    fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<Transaction>, ParserError> {
+    fn load<R: std::io::Read>(reader: R) -> Result<Vec<Transaction>, ParserError> {
         let reader = BufReader::new(reader);
 
         let mut resualt = Vec::<Transaction>::new();

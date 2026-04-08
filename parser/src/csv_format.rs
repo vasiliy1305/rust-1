@@ -1,8 +1,8 @@
 use crate::error::{CsvError, ParserError};
 use crate::{LoadData, SaveData, Status, Transaction, TxType, trim_quotes};
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+// use std::fs::File;
+// use std::io::{BufRead, BufReader};
 
 const HEADER: [&str; 8] = [
     "TX_ID",
@@ -40,9 +40,9 @@ impl SaveData for CsvFormat {
     fn save<W: std::io::Write>(writer: &mut W, data: &Vec<Transaction>) -> Result<(), ParserError> {
         writeln!(writer, "{}", HEADER.join(","))?;
         for tx in data {
-            writeln!(writer, "{}", transaction_to_str(tx));
+            writeln!(writer, "{}", transaction_to_str(tx))?;
         }
-        writer.flush();
+        writer.flush()?;
         Ok(())
     }
 }
