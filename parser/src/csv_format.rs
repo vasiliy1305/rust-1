@@ -84,8 +84,50 @@ fn check_header(header: &str) -> Result<(), CsvError> {
     Ok(())
 }
 
+fn split_csv_line(line: &str) -> Result<Vec<String>, CsvError> {
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut chars = line.chars().peekable();
+    let mut in_quotes = false;
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '"' => {
+                if in_quotes {
+                    if let Some('"') = chars.peek() {
+                        current.push('"');
+                        chars.next();
+                    } else {
+                        in_quotes = false;
+                    }
+                } else {
+                    in_quotes = true;
+                }
+            }
+            ',' if !in_quotes => {
+                fields.push(current);
+                current = String::new();
+            }
+            _ => {
+                current.push(ch);
+            }
+        }
+    }
+
+    if in_quotes {
+        return Err(CsvError::WrongColumn {
+            index: 7,
+            expected: "closed quoted string".to_string(),
+            actual: line.to_string(),
+        });
+    }
+
+    fields.push(current);
+    Ok(fields)
+}
+
 fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
-    let parts: Vec<&str> = line.split(',').collect();
+    let parts:Vec<String> = split_csv_line(line)?;
     if parts.len() != HEADER.len() {
         return Err(CsvError::InvalidLength {
             expected: HEADER.len(),
@@ -126,7 +168,7 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
         }
     };
 
-    let description = trim_quotes(parts[7]).to_string();
+    let description = trim_quotes(&parts[7]);
 
     Ok(YPBankRecord {
         tx_id,
@@ -143,6 +185,19 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+
+    #[test]
+#[test]
+fn test_parse_line_with_comma_in_description() {
+    let result = parse_line(
+        r#"1002,TRANSFER,501,502,15000,1672534800000,FAILURE,"Payment for services, invoice123""#
+    );
+
+    assert!(result.is_ok());
+    let tx = result.unwrap();
+    assert_eq!(tx.description, "Payment for services, invoice123");
+}
 
     #[test]
     fn test_transaction_to_str() {
