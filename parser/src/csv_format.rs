@@ -1,9 +1,9 @@
+use std::io::{BufRead, BufReader};
+use std::str;
+
 use crate::error::{CsvError, ParserError};
 use crate::utils::trim_quotes;
 use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
-
-// use std::fs::File;
-// use std::io::{BufRead, BufReader};
 
 const HEADER: [&str; 8] = [
     "TX_ID",
@@ -20,17 +20,20 @@ pub struct YPBankCsvFormat;
 
 impl FormatReader for YPBankCsvFormat {
     fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
-        let mut content = String::new();
-        reader.read_to_string(&mut content)?; // todo fix 
+        let mut reader = BufReader::new(reader);
         let mut result = Vec::<YPBankRecord>::new();
 
         let mut is_header = true;
-        for line in content.lines() {
+        for line in reader.lines() {
+            let line = line?;
+            if line.trim().is_empty() {
+                continue;
+            }
             if is_header {
-                check_header(line)?;
+                check_header(&line)?;
                 is_header = false;
             } else {
-                result.push(parse_line(line)?);
+                result.push(parse_line(&line)?);
             }
         }
         Ok(result)
@@ -127,7 +130,7 @@ fn split_csv_line(line: &str) -> Result<Vec<String>, CsvError> {
 }
 
 fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
-    let parts:Vec<String> = split_csv_line(line)?;
+    let parts: Vec<String> = split_csv_line(line)?;
     if parts.len() != HEADER.len() {
         return Err(CsvError::InvalidLength {
             expected: HEADER.len(),
@@ -142,10 +145,8 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
         "TRANSFER" => TxType::TRANSFER,
         "WITHDRAWAL" => TxType::WITHDRAWAL,
         _ => {
-            return Err(CsvError::WrongColumn {
-                index: 1,
-                expected: "DEPOSIT, TRANSFER, WITHDRAWAL".to_string(),
-                actual: parts[1].trim().to_string(),
+            return Err(CsvError::InvalidTxType {
+                value: parts[1].trim().to_string(),
             });
         }
     };
@@ -160,10 +161,8 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
         "FAILURE" => Status::FAILURE,
         "PENDING" => Status::PENDING,
         _ => {
-            return Err(CsvError::WrongColumn {
-                index: 6,
-                expected: "SUCCESS, FAILURE, PENDING".to_string(),
-                actual: parts[6].trim().to_string(),
+            return Err(CsvError::InvalidStatus {
+                value: parts[6].trim().to_string(),
             });
         }
     };
@@ -186,18 +185,17 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
 mod tests {
     use super::*;
 
-
     #[test]
-#[test]
-fn test_parse_line_with_comma_in_description() {
-    let result = parse_line(
-        r#"1002,TRANSFER,501,502,15000,1672534800000,FAILURE,"Payment for services, invoice123""#
-    );
+    #[test]
+    fn test_parse_line_with_comma_in_description() {
+        let result = parse_line(
+            r#"1002,TRANSFER,501,502,15000,1672534800000,FAILURE,"Payment for services, invoice123""#,
+        );
 
-    assert!(result.is_ok());
-    let tx = result.unwrap();
-    assert_eq!(tx.description, "Payment for services, invoice123");
-}
+        assert!(result.is_ok());
+        let tx = result.unwrap();
+        assert_eq!(tx.description, "Payment for services, invoice123");
+    }
 
     #[test]
     fn test_transaction_to_str() {

@@ -23,11 +23,43 @@ impl std::fmt::Display for TxType {
     }
 }
 
+impl std::str::FromStr for TxType {
+    type Err = crate::error::TxtError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "DEPOSIT" => Ok(TxType::DEPOSIT),
+            "TRANSFER" => Ok(TxType::TRANSFER),
+            "WITHDRAWAL" => Ok(TxType::WITHDRAWAL),
+            _ => Err(crate::error::TxtError::WrongValue {
+                // привести ошибки к адекватному виду
+                value: s.to_string(),
+            }),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Status {
     SUCCESS,
     FAILURE,
     PENDING,
+}
+
+impl std::str::FromStr for Status {
+    type Err = crate::error::TxtError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "SUCCESS" => Ok(Status::SUCCESS),
+            "FAILURE" => Ok(Status::FAILURE),
+            "PENDING" => Ok(Status::PENDING),
+            _ => Err(crate::error::TxtError::WrongValue {
+                // привести ошибки к адекватному виду
+                value: s.to_string(),
+            }),
+        }
+    }
 }
 
 impl std::fmt::Display for Status {

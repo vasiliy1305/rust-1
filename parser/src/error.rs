@@ -30,6 +30,12 @@ pub enum CsvError {
         actual: String,
     },
 
+    #[error("Invalid TxType {value}")]
+    InvalidTxType { value: String },
+
+    #[error("Invalid Status {value}")]
+    InvalidStatus { value: String },
+
     #[error("parse int error: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
 }

@@ -1,4 +1,5 @@
 use std::io::{BufRead, BufReader};
+use std::str::FromStr;
 
 use crate::error::{ParserError, TxtError};
 use crate::utils::trim_quotes;
@@ -47,19 +48,29 @@ impl TransactionDraft {
             })?,
         })
     }
+
+    fn is_empty(&self) -> bool {
+        self.tx_id.is_none()
+            && self.tx_type.is_none()
+            && self.from_user_id.is_none()
+            && self.to_user_id.is_none()
+            && self.amount.is_none()
+            && self.timestamp.is_none()
+            && self.status.is_none()
+            && self.description.is_none()
+    }
 }
 
 impl FormatReader for YPBankTxtFormat {
     fn load<R: std::io::Read>(reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
         let reader = BufReader::new(reader);
-
         let mut result = Vec::<YPBankRecord>::new();
-
         let mut tx = TransactionDraft::default();
 
         for line in reader.lines() {
             let line = line?;
             let key_value = get_line_type(&line)?;
+
             match key_value {
                 TxtLineType::Comment => {} // просто игнорируем
                 TxtLineType::Data(value) => match value {
@@ -73,12 +84,18 @@ impl FormatReader for YPBankTxtFormat {
                     TxtKeyValue::TIMESTAMP(ts) => tx.timestamp = Some(ts),
                 },
                 TxtLineType::Empty => {
-                    // что если несколько пустых строк подрят или пустая строка на первом месте? можно ввести флаг на этот случай
-                    result.push(tx.build()?);
-                    tx = TransactionDraft::default();
+                    if !tx.is_empty() {
+                        result.push(tx.build()?);
+                        tx = TransactionDraft::default();
+                    }
                 }
             }
         }
+
+        if !tx.is_empty() {
+            result.push(tx.build()?);
+        }
+
         Ok(result)
     }
 }
@@ -88,7 +105,7 @@ impl FormatWriter for YPBankTxtFormat {
         for tx in data {
             writeln!(
                 writer,
-                "TX_ID: {}\nTX_TYPE: {}\nFROM_USER_ID: {}\nTO_USER_ID: {}\nAMOUNT: {}\nTIMESTAMP: {}\nSTATUS: \"{}\"\nDESCRIPTION: {}\n",
+                "TX_ID: {}\nTX_TYPE: {}\nFROM_USER_ID: {}\nTO_USER_ID: {}\nAMOUNT: {}\nTIMESTAMP: {}\nSTATUS: {}\nDESCRIPTION: \"{}\"\n",
                 tx.tx_id,
                 tx.tx_type,
                 tx.from_user_id,
@@ -140,14 +157,10 @@ fn get_line_type(line: &str) -> Result<TxtLineType, TxtError> {
         match key {
             "TX_ID" => Ok(TxtLineType::Data(TxtKeyValue::TX_ID(value.parse::<u64>()?))),
 
-            "TX_TYPE" => match value {
-                "DEPOSIT" => Ok(TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::DEPOSIT))),
-                "TRANSFER" => Ok(TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::TRANSFER))),
-                "WITHDRAWAL" => Ok(TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::WITHDRAWAL))),
-                _ => Err(TxtError::WrongValue {
-                    value: value.to_string(),
-                }),
-            },
+            "TX_TYPE" => Ok(TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::from_str(
+                value,
+            )?))),
+
             "FROM_USER_ID" => Ok(TxtLineType::Data(TxtKeyValue::FROM_USER_ID(
                 value.parse::<u64>()?,
             ))),
@@ -163,21 +176,14 @@ fn get_line_type(line: &str) -> Result<TxtLineType, TxtError> {
                 value.parse::<u64>()?,
             ))),
 
-            "STATUS" => match value {
-                "SUCCESS" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::SUCCESS))),
-                "FAILURE" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::FAILURE))),
-                "PENDING" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::PENDING))),
-                _ => Err(TxtError::WrongValue {
-                    value: value.to_string(),
-                }),
-            },
+            "STATUS" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::from_str(s)?))),
 
             "DESCRIPTION" => Ok(TxtLineType::Data(TxtKeyValue::DESCRIPTION(
                 trim_quotes(value).to_string(),
             ))),
 
             _ => Err(TxtError::WrongKey {
-                key: value.to_string(),
+                key: key.to_string(),
             }),
         }
     }
