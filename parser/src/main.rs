@@ -1,8 +1,7 @@
 use clap::{Parser, ValueEnum};
 use parser::{FormatReader, FormatWriter};
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter};
-use std::process::Output;
+use std::io::{BufReader, BufWriter};
 
 #[derive(Debug, Clone, ValueEnum)]
 enum FileFormat {
@@ -36,8 +35,8 @@ fn main() {
     println!("output   = {}", args.output);
     println!("output-format = {:?}", args.output_format);
 
-    let mut input = File::open(args.input.to_string()).unwrap();
-    let mut reader = BufReader::new(input);
+    let input = File::open(args.input.to_string()).unwrap();
+    let reader = BufReader::new(input);
 
     let data = match args.input_format {
         FileFormat::Csv => parser::csv_format::YPBankCsvFormat::load(reader),
@@ -45,7 +44,7 @@ fn main() {
         FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader),
     };
 
-    let mut output = File::create(args.output.to_string()).unwrap();
+    let output = File::create(args.output.to_string()).unwrap();
     let mut writer = BufWriter::new(output);
 
     let status = match args.output_format {
@@ -58,9 +57,8 @@ fn main() {
         }
     };
 
-    if status.is_ok(){
+    if status.is_ok() {
         println!("Succssess saved!")
-    }else{
-
+    } else {
     }
 }
