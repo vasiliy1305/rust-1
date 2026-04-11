@@ -29,7 +29,7 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let file1 = File::open(args.file1.to_string())?;
+    let file1 = File::open(&args.file1)?;
     let reader1 = BufReader::new(file1);
 
     let data1 = match args.format1 {
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader1)?,
     };
 
-    let file2 = File::open(args.file2.to_string())?;
+    let file2 = File::open(&args.file2)?;
     let reader2 = BufReader::new(file2);
 
     let data2 = match args.format2 {

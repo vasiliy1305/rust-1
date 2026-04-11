@@ -28,7 +28,7 @@ struct Args {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let input = File::open(args.input.to_string())?;
+    let input = File::open(&args.input)?;
     let reader = BufReader::new(input);
 
     let data = match args.input_format {

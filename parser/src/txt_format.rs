@@ -80,9 +80,9 @@ impl FormatReader for YPBankTxtFormat {
                     TxtKeyValue::Amount(amount) => tx.amount = Some(amount),
                     TxtKeyValue::FromUserId(from) => tx.from_user_id = Some(from),
                     TxtKeyValue::ToUserId(to) => tx.to_user_id = Some(to),
-                    TxtKeyValue::DESCRIPTION(desk) => tx.description = Some(desk),
-                    TxtKeyValue::STATUS(status) => tx.status = Some(status),
-                    TxtKeyValue::TIMESTAMP(ts) => tx.timestamp = Some(ts),
+                    TxtKeyValue::Description(desk) => tx.description = Some(desk),
+                    TxtKeyValue::Status(status) => tx.status = Some(status),
+                    TxtKeyValue::Timestamp(ts) => tx.timestamp = Some(ts),
                 },
                 TxtLineType::Empty => {
                     if !tx.is_empty() {
@@ -136,9 +136,9 @@ enum TxtKeyValue {
     FromUserId(u64),
     ToUserId(u64),
     Amount(u64),
-    TIMESTAMP(u64),
-    STATUS(Status),
-    DESCRIPTION(String),
+    Timestamp(u64),
+    Status(Status),
+    Description(String),
 }
 
 fn get_line_type(line: &str) -> Result<TxtLineType, TxtError> {
@@ -174,16 +174,16 @@ fn get_line_type(line: &str) -> Result<TxtLineType, TxtError> {
             "AMOUNT" => Ok(TxtLineType::Data(TxtKeyValue::Amount(
                 value.parse::<u64>()?,
             ))),
-            "TIMESTAMP" => Ok(TxtLineType::Data(TxtKeyValue::TIMESTAMP(
+            "TIMESTAMP" => Ok(TxtLineType::Data(TxtKeyValue::Timestamp(
                 value.parse::<u64>()?,
             ))),
 
-            "STATUS" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::from_str(
+            "STATUS" => Ok(TxtLineType::Data(TxtKeyValue::Status(Status::from_str(
                 value,
             )?))),
 
-            "DESCRIPTION" => Ok(TxtLineType::Data(TxtKeyValue::DESCRIPTION(
-                parse_description(&value)?,
+            "DESCRIPTION" => Ok(TxtLineType::Data(TxtKeyValue::Description(
+                parse_description(value)?,
             ))),
 
             _ => Err(TxtError::WrongKey {
@@ -257,35 +257,35 @@ mod test {
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::TIMESTAMP(1633036800000))
+            TxtLineType::Data(TxtKeyValue::Timestamp(1633036800000))
         );
 
         let line = get_line_type("STATUS: SUCCESS");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::STATUS(Status::SUCCESS))
+            TxtLineType::Data(TxtKeyValue::Status(Status::SUCCESS))
         );
 
         let line = get_line_type("STATUS: FAILURE");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::STATUS(Status::FAILURE))
+            TxtLineType::Data(TxtKeyValue::Status(Status::FAILURE))
         );
 
         let line = get_line_type("STATUS: PENDING");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::STATUS(Status::PENDING))
+            TxtLineType::Data(TxtKeyValue::Status(Status::PENDING))
         );
 
         let line = get_line_type("DESCRIPTION: \"Terminal deposit\"");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::DESCRIPTION("Terminal deposit".to_string()))
+            TxtLineType::Data(TxtKeyValue::Description("Terminal deposit".to_string()))
         );
     }
 
@@ -294,7 +294,7 @@ mod test {
         let line = get_line_type("STATUS: SUCCESS");
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::STATUS(Status::SUCCESS))
+            TxtLineType::Data(TxtKeyValue::Status(Status::SUCCESS))
         );
     }
 }
