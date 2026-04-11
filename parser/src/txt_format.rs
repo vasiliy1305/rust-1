@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 
 use crate::error::{ParserError, TxtError};
-use crate::utils::trim_quotes;
+use crate::utils::{parse_description, format_description};
 use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
 
 pub struct YPBankTxtFormat;
@@ -20,6 +20,7 @@ struct TransactionDraft {
 }
 
 impl TransactionDraft {
+    // все равно осталась проблемма дублирования полей (не совсем понял по спецификации евляется ли это ошибкой)
     fn build(self) -> Result<YPBankRecord, TxtError> {
         Ok(YPBankRecord {
             tx_id: self.tx_id.ok_or(TxtError::MissingField {
@@ -74,11 +75,11 @@ impl FormatReader for YPBankTxtFormat {
             match key_value {
                 TxtLineType::Comment => {} // просто игнорируем
                 TxtLineType::Data(value) => match value {
-                    TxtKeyValue::TX_ID(id) => tx.tx_id = Some(id),
-                    TxtKeyValue::TX_TYPE(tx_type) => tx.tx_type = Some(tx_type),
-                    TxtKeyValue::AMOUNT(amount) => tx.amount = Some(amount),
-                    TxtKeyValue::FROM_USER_ID(from) => tx.from_user_id = Some(from),
-                    TxtKeyValue::TO_USER_ID(to) => tx.to_user_id = Some(to),
+                    TxtKeyValue::TxId(id) => tx.tx_id = Some(id),
+                    TxtKeyValue::TxType(tx_type) => tx.tx_type = Some(tx_type),
+                    TxtKeyValue::Amount(amount) => tx.amount = Some(amount),
+                    TxtKeyValue::FromUserId(from) => tx.from_user_id = Some(from),
+                    TxtKeyValue::ToUserId(to) => tx.to_user_id = Some(to),
                     TxtKeyValue::DESCRIPTION(desk) => tx.description = Some(desk),
                     TxtKeyValue::STATUS(status) => tx.status = Some(status),
                     TxtKeyValue::TIMESTAMP(ts) => tx.timestamp = Some(ts),
@@ -100,6 +101,7 @@ impl FormatReader for YPBankTxtFormat {
     }
 }
 
+
 impl FormatWriter for YPBankTxtFormat {
     fn save<W: std::io::Write>(writer: &mut W, data: &[YPBankRecord]) -> Result<(), ParserError> {
         for tx in data {
@@ -113,7 +115,7 @@ impl FormatWriter for YPBankTxtFormat {
                 tx.amount,
                 tx.timestamp,
                 tx.status,
-                tx.description
+                format_description(&tx.description)
             )?
         }
         Ok(())
@@ -129,11 +131,11 @@ enum TxtLineType {
 
 #[derive(Debug, PartialEq)]
 enum TxtKeyValue {
-    TX_ID(u64),
-    TX_TYPE(TxType),
-    FROM_USER_ID(u64),
-    TO_USER_ID(u64),
-    AMOUNT(u64),
+    TxId(u64),
+    TxType(TxType),
+    FromUserId(u64),
+    ToUserId(u64),
+    Amount(u64),
     TIMESTAMP(u64),
     STATUS(Status),
     DESCRIPTION(String),
@@ -155,31 +157,33 @@ fn get_line_type(line: &str) -> Result<TxtLineType, TxtError> {
         )?;
 
         match key {
-            "TX_ID" => Ok(TxtLineType::Data(TxtKeyValue::TX_ID(value.parse::<u64>()?))),
+            "TX_ID" => Ok(TxtLineType::Data(TxtKeyValue::TxId(value.parse::<u64>()?))),
 
-            "TX_TYPE" => Ok(TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::from_str(
+            "TX_TYPE" => Ok(TxtLineType::Data(TxtKeyValue::TxType(TxType::from_str(
                 value,
             )?))),
 
-            "FROM_USER_ID" => Ok(TxtLineType::Data(TxtKeyValue::FROM_USER_ID(
+            "FROM_USER_ID" => Ok(TxtLineType::Data(TxtKeyValue::FromUserId(
                 value.parse::<u64>()?,
             ))),
 
-            "TO_USER_ID" => Ok(TxtLineType::Data(TxtKeyValue::TO_USER_ID(
+            "TO_USER_ID" => Ok(TxtLineType::Data(TxtKeyValue::ToUserId(
                 value.parse::<u64>()?,
             ))),
 
-            "AMOUNT" => Ok(TxtLineType::Data(TxtKeyValue::AMOUNT(
+            "AMOUNT" => Ok(TxtLineType::Data(TxtKeyValue::Amount(
                 value.parse::<u64>()?,
             ))),
             "TIMESTAMP" => Ok(TxtLineType::Data(TxtKeyValue::TIMESTAMP(
                 value.parse::<u64>()?,
             ))),
 
-            "STATUS" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::from_str(s)?))),
+            "STATUS" => Ok(TxtLineType::Data(TxtKeyValue::STATUS(Status::from_str(
+                value,
+            )?))),
 
             "DESCRIPTION" => Ok(TxtLineType::Data(TxtKeyValue::DESCRIPTION(
-                trim_quotes(value).to_string(),
+                parse_description(&value)?,
             ))),
 
             _ => Err(TxtError::WrongKey {
@@ -207,47 +211,47 @@ mod test {
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::TX_ID(1234567890123456))
+            TxtLineType::Data(TxtKeyValue::TxId(1234567890123456))
         );
 
         let line = get_line_type("TX_TYPE: DEPOSIT");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::DEPOSIT))
+            TxtLineType::Data(TxtKeyValue::TxType(TxType::DEPOSIT))
         );
 
         let line = get_line_type("TX_TYPE: TRANSFER");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::TRANSFER))
+            TxtLineType::Data(TxtKeyValue::TxType(TxType::TRANSFER))
         );
 
         let line = get_line_type("TX_TYPE: WITHDRAWAL");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::TX_TYPE(TxType::WITHDRAWAL))
+            TxtLineType::Data(TxtKeyValue::TxType(TxType::WITHDRAWAL))
         );
 
         let line = get_line_type("FROM_USER_ID: 123");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::FROM_USER_ID(123))
+            TxtLineType::Data(TxtKeyValue::FromUserId(123))
         );
 
         let line = get_line_type("TO_USER_ID: 9876543210987654");
         assert!(!line.is_err());
         assert_eq!(
             line.unwrap(),
-            TxtLineType::Data(TxtKeyValue::TO_USER_ID(9876543210987654))
+            TxtLineType::Data(TxtKeyValue::ToUserId(9876543210987654))
         );
 
         let line = get_line_type("AMOUNT: 10000");
         assert!(!line.is_err());
-        assert_eq!(line.unwrap(), TxtLineType::Data(TxtKeyValue::AMOUNT(10000)));
+        assert_eq!(line.unwrap(), TxtLineType::Data(TxtKeyValue::Amount(10000)));
 
         let line = get_line_type("TIMESTAMP: 1633036800000");
         assert!(!line.is_err());
@@ -282,6 +286,15 @@ mod test {
         assert_eq!(
             line.unwrap(),
             TxtLineType::Data(TxtKeyValue::DESCRIPTION("Terminal deposit".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_status() {
+        let line = get_line_type("STATUS: SUCCESS");
+        assert_eq!(
+            line.unwrap(),
+            TxtLineType::Data(TxtKeyValue::STATUS(Status::SUCCESS))
         );
     }
 }

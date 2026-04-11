@@ -1,6 +1,7 @@
 use clap::{Parser, ValueEnum};
 use parser::{FormatReader, FormatWriter};
 use std::fs::File;
+use std::io;
 use std::io::{BufReader, BufWriter};
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -21,21 +22,13 @@ struct Args {
     input_format: FileFormat,
 
     #[arg(long)]
-    output: String,
-
-    #[arg(long)]
     output_format: FileFormat,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    println!("input   = {}", args.input);
-    println!("input-format = {:?}", args.input_format);
-    println!("output   = {}", args.output);
-    println!("output-format = {:?}", args.output_format);
-
-    let input = File::open(args.input.to_string()).unwrap();
+    let input = File::open(args.input.to_string())?;
     let reader = BufReader::new(input);
 
     let data = match args.input_format {
@@ -44,21 +37,13 @@ fn main() {
         FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader),
     };
 
-    let output = File::create(args.output.to_string()).unwrap();
-    let mut writer = BufWriter::new(output);
+    let stdout = io::stdout();
+    let mut writer = BufWriter::new(stdout.lock());
 
-    let status = match args.output_format {
-        FileFormat::Csv => parser::csv_format::YPBankCsvFormat::save(&mut writer, &data.unwrap()),
-
-        FileFormat::Txt => parser::txt_format::YPBankTxtFormat::save(&mut writer, &data.unwrap()),
-
-        FileFormat::Binary => {
-            parser::bin_format::YPBankBinFormat::save(&mut writer, &data.unwrap())
-        }
+    match args.output_format {
+        FileFormat::Csv => parser::csv_format::YPBankCsvFormat::save(&mut writer, &data?)?,
+        FileFormat::Txt => parser::txt_format::YPBankTxtFormat::save(&mut writer, &data?)?,
+        FileFormat::Binary => parser::bin_format::YPBankBinFormat::save(&mut writer, &data?)?,
     };
-
-    if status.is_ok() {
-        println!("Succssess saved!")
-    } else {
-    }
+    Ok(())
 }

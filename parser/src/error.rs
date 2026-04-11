@@ -16,6 +16,7 @@ pub enum ParserError {
 
     #[error("Rarce From Utf Error: {0}")]
     UTF(#[from] std::string::FromUtf8Error),
+
 }
 
 #[derive(Debug, Error)]
@@ -32,6 +33,9 @@ pub enum CsvError {
 
     #[error("Invalid TxType {value}")]
     InvalidTxType { value: String },
+
+    #[error("Description error: {0}")]
+    Description(#[from] DescriptionError),
 
     #[error("Invalid Status {value}")]
     InvalidStatus { value: String },
@@ -51,6 +55,9 @@ pub enum TxtError {
     #[error("Wrong value = '{value}'")]
     WrongValue { value: String },
 
+    #[error("Description error: {0}")]
+    Description(#[from] DescriptionError),
+    
     #[error("parse int error: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
 
@@ -76,6 +83,19 @@ pub enum BinError {
 
     #[error("IO Error: {0}")]
     Io(#[from] std::io::Error),
+
     // #[error("MissingField field = '{field}'")]
     // MissingField { field: String },
+    #[error("Wrong record size: expected '{expected}', got '{actual}'")]
+    WrongRecordSize { expected: u32, actual: u32 },
+}
+
+
+#[derive(Debug, Error)]
+pub enum DescriptionError {
+    #[error("Invalid description format: '{value}'")]
+    InvalidFormat { value: String },
+
+    #[error("Invalid description escape: '{value}'")]
+    InvalidEscape { value: String },
 }

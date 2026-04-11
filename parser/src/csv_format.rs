@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 use std::str;
 
 use crate::error::{CsvError, ParserError};
-use crate::utils::trim_quotes;
+use crate::utils::{parse_description, format_description};
 use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
 
 const HEADER: [&str; 8] = [
@@ -19,8 +19,8 @@ const HEADER: [&str; 8] = [
 pub struct YPBankCsvFormat;
 
 impl FormatReader for YPBankCsvFormat {
-    fn load<R: std::io::Read>(mut reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
-        let mut reader = BufReader::new(reader);
+    fn load<R: std::io::Read>(reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
+        let reader = BufReader::new(reader);
         let mut result = Vec::<YPBankRecord>::new();
 
         let mut is_header = true;
@@ -51,6 +51,8 @@ impl FormatWriter for YPBankCsvFormat {
     }
 }
 
+
+
 fn transaction_to_str(tx: &YPBankRecord) -> String {
     format!(
         "{},{},{},{},{},{},{},\"{}\"", // не совсем хорошо так делать
@@ -61,7 +63,7 @@ fn transaction_to_str(tx: &YPBankRecord) -> String {
         tx.amount,
         tx.timestamp,
         tx.status,
-        tx.description
+        format_description(&tx.description)
     )
 }
 
@@ -78,7 +80,7 @@ fn check_header(header: &str) -> Result<(), CsvError> {
     for (index, (expected, actual)) in HEADER.iter().zip(actual_header.iter()).enumerate() {
         if expected.trim() != actual.trim() {
             return Err(CsvError::WrongColumn {
-                index: index,
+                index,
                 expected: expected.to_string(),
                 actual: actual.to_string(),
             });
@@ -167,7 +169,7 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
         }
     };
 
-    let description = trim_quotes(&parts[7]);
+    let description = parse_description(&parts[7])?;
 
     Ok(YPBankRecord {
         tx_id,
@@ -185,7 +187,6 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
 mod tests {
     use super::*;
 
-    #[test]
     #[test]
     fn test_parse_line_with_comma_in_description() {
         let result = parse_line(
@@ -212,15 +213,6 @@ mod tests {
 
         assert_eq!(transaction_to_str(&tx), "1000000000000000,DEPOSIT,0,9223372036854775807,100,1633036860000,FAILURE,\"Record number 1\"".to_string())
     }
-
-    // #[test]
-    // fn test_load_save_data(){
-    //     let mut file = File::open("C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example.csv").unwrap();
-    //     let reader = BufReader::new(file);
-    //     let data = CsvFormat::load(reader);
-
-    //     println!("{:?}", data);
-    // }
 
     #[test]
     fn test_check_header() {
@@ -285,5 +277,24 @@ mod tests {
             }
             _ => panic!("ожидали CsvError::InvalidLength"),
         }
+    }
+
+    #[test]
+    fn test_transaction_to_str_escapes_quotes() {
+        let tx = YPBankRecord {
+            tx_id: 1,
+            tx_type: TxType::DEPOSIT,
+            from_user_id: 0,
+            to_user_id: 1,
+            amount: 100,
+            timestamp: 123,
+            status: Status::SUCCESS,
+            description: r#"Payment for "VIP" client"#.to_string(),
+        };
+
+        assert_eq!(
+            transaction_to_str(&tx),
+            r#"1,DEPOSIT,0,1,100,123,SUCCESS,"Payment for ""VIP"" client""#
+        );
     }
 }

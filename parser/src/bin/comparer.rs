@@ -1,7 +1,7 @@
 use clap::{Parser, ValueEnum};
-use parser::{FormatReader, FormatWriter};
+use parser::FormatReader;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::BufReader;
 
 #[derive(Debug, Clone, ValueEnum)]
 enum FileFormat {
@@ -18,44 +18,59 @@ struct Args {
     file1: String,
 
     #[arg(long)]
-    file1_format: FileFormat,
+    format1: FileFormat,
 
     #[arg(long)]
     file2: String,
 
     #[arg(long)]
-    file2_format: FileFormat,
+    format2: FileFormat,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-
-    println!("file1   = {}", args.file1);
-    println!("file1_format = {:?}", args.file1_format);
-    println!("file2   = {}", args.file2);
-    println!("file2_format = {:?}", args.file2_format);
-
-    let file1 = File::open(args.file1.to_string()).unwrap();
+    let file1 = File::open(args.file1.to_string())?;
     let reader1 = BufReader::new(file1);
 
-    let data1 = match args.file1_format {
-        FileFormat::Csv => parser::csv_format::YPBankCsvFormat::load(reader1).unwrap(),
-        FileFormat::Txt => parser::txt_format::YPBankTxtFormat::load(reader1).unwrap(),
-        FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader1).unwrap(),
+    let data1 = match args.format1 {
+        FileFormat::Csv => parser::csv_format::YPBankCsvFormat::load(reader1)?,
+        FileFormat::Txt => parser::txt_format::YPBankTxtFormat::load(reader1)?,
+        FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader1)?,
     };
 
-    let file2 = File::open(args.file2.to_string()).unwrap();
+    let file2 = File::open(args.file2.to_string())?;
     let reader2 = BufReader::new(file2);
 
-    let data2 = match args.file2_format {
-        FileFormat::Csv => parser::csv_format::YPBankCsvFormat::load(reader2).unwrap(),
-        FileFormat::Txt => parser::txt_format::YPBankTxtFormat::load(reader2).unwrap(),
-        FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader2).unwrap(),
+    let data2 = match args.format2 {
+        FileFormat::Csv => parser::csv_format::YPBankCsvFormat::load(reader2)?,
+        FileFormat::Txt => parser::txt_format::YPBankTxtFormat::load(reader2)?,
+        FileFormat::Binary => parser::bin_format::YPBankBinFormat::load(reader2)?,
     };
 
-    // compire size
-    if data1.len() != data2.len(){
-        println!("Diferent size of file, file1.len = {}, file2.len = {}", data1.len(), data2.len());
+    if data1.len() != data2.len() {
+        println!(
+            "Different number of records: '{}' has {}, '{}' has {}",
+            args.file1,
+            data1.len(),
+            args.file2,
+            data2.len()
+        );
+        return Ok(());
     }
 
+    for (index, (left, right)) in data1.iter().zip(data2.iter()).enumerate() {
+        if left != right {
+            println!("Records differ at index {}", index);
+            println!("file1: {:?}", left);
+            println!("file2: {:?}", right);
+            return Ok(());
+        }
+    }
+
+    println!(
+        "The transaction records in '{}' and '{}' are identical.",
+        args.file1, args.file2
+    );
+
+    Ok(())
 }

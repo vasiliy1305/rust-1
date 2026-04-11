@@ -14,11 +14,11 @@ impl FormatReader for YPBankBinFormat {
         let mut result = Vec::new();
 
         loop {
-            let Some(_record_size) = try_read_header(&mut reader)? else {
+            let Some(record_size) = try_read_header(&mut reader)? else {
                 break;
             };
 
-            result.push(read_body(&mut reader)?);
+            result.push(read_body(&mut reader, record_size)?);
         }
 
         Ok(result)
@@ -74,7 +74,7 @@ fn save_tx<W: Write>(writer: &mut W, tx: &YPBankRecord) -> Result<(), ParserErro
     writer.write_all(&tx.timestamp.to_be_bytes())?;
     writer.write_all(&status_to_byte(&tx.status).to_be_bytes())?;
     writer.write_all(&desc_len.to_be_bytes())?;
-    writer.write_all(&desc_byte)?;
+    writer.write_all(desc_byte)?;
     Ok(())
 }
 
@@ -122,14 +122,17 @@ fn try_read_header<R: std::io::Read>(reader: &mut R) -> Result<Option<u32>, Pars
     Ok(Some(record_size))
 }
 
-fn read_body<R: std::io::Read>(reader: &mut R) -> Result<YPBankRecord, ParserError> {
+fn read_body<R: std::io::Read>(
+    reader: &mut R,
+    record_size: u32,
+) -> Result<YPBankRecord, ParserError> {
     let tx_id = read_u64(reader)?;
     let tx_type = match read_u8(reader)? {
         0 => TxType::DEPOSIT,
         1 => TxType::TRANSFER,
         2 => TxType::WITHDRAWAL,
         value => {
-            return Err(ParserError::Bin(BinError::WrongTxType { value: value }));
+            return Err(ParserError::Bin(BinError::WrongTxType { value }));
         }
     };
     let from_user_id = read_u64(reader)?;
@@ -141,10 +144,20 @@ fn read_body<R: std::io::Read>(reader: &mut R) -> Result<YPBankRecord, ParserErr
         1 => Status::FAILURE,
         2 => Status::PENDING,
         value => {
-            return Err(ParserError::Bin(BinError::WrongStatus { value: value }));
+            return Err(ParserError::Bin(BinError::WrongStatus {  value }));
         }
     };
     let desc_len = read_u32(reader)?;
+
+    let expected_size = 8 + 1 + 8 + 8 + 8 + 8 + 1 + 4 + desc_len;
+
+    if record_size != expected_size {
+        return Err(BinError::WrongRecordSize {
+            expected: expected_size,
+            actual: record_size,
+        }
+        .into());
+    }
     let description = read_string(reader, desc_len)?;
 
     Ok(YPBankRecord {
