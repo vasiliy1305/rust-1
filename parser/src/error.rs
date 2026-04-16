@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+
+/// Общие ошибки для всех форматов
 #[derive(Debug, Error)]
 pub enum ParserError {
     #[error("CSV Error: {0}")]
@@ -18,6 +20,8 @@ pub enum ParserError {
     UTF(#[from] std::string::FromUtf8Error),
 }
 
+
+/// ошибки специфичные для CSV формата
 #[derive(Debug, Error)]
 pub enum CsvError {
     #[error("Invalid column count, expected '{expected}', got '{actual}'")]
@@ -46,6 +50,8 @@ pub enum CsvError {
     UnclosedQuotedField { line: String },
 }
 
+
+/// ошибки специфичные для TXT формата
 #[derive(Debug, Error)]
 pub enum TxtError {
     #[error("Wrong parts number expected = '{expected}', actual = '{actual}'")]
@@ -67,6 +73,8 @@ pub enum TxtError {
     MissingField { field: String },
 }
 
+
+/// ошибки специфичные для Binary формата
 #[derive(Debug, Error)]
 pub enum BinError {
     #[error("Wrong magic")]
