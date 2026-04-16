@@ -20,7 +20,6 @@ struct TransactionDraft {
 }
 
 impl TransactionDraft {
-    // все равно осталась проблемма дублирования полей (не совсем понял по спецификации евляется ли это ошибкой)
     fn build(self) -> Result<YPBankRecord, TxtError> {
         Ok(YPBankRecord {
             tx_id: self.tx_id.ok_or(TxtError::MissingField {
@@ -62,6 +61,17 @@ impl TransactionDraft {
     }
 }
 
+// небольшая функция что бы решить проблему дубдирования полей
+fn set_once<T>(slot: &mut Option<T>, value: T, field: &str) -> Result<(), TxtError> {
+    if slot.is_some() {
+        return Err(TxtError::DuplicateField {
+            field: field.to_string(),
+        });
+    }
+    *slot = Some(value);
+    Ok(())
+}
+
 impl FormatReader for YPBankTxtFormat {
     fn load<R: std::io::Read>(reader: R) -> Result<Vec<YPBankRecord>, ParserError> {
         let reader = BufReader::new(reader);
@@ -75,14 +85,18 @@ impl FormatReader for YPBankTxtFormat {
             match key_value {
                 TxtLineType::Comment => {} // просто игнорируем
                 TxtLineType::Data(value) => match value {
-                    TxtKeyValue::TxId(id) => tx.tx_id = Some(id),
-                    TxtKeyValue::TxType(tx_type) => tx.tx_type = Some(tx_type),
-                    TxtKeyValue::Amount(amount) => tx.amount = Some(amount),
-                    TxtKeyValue::FromUserId(from) => tx.from_user_id = Some(from),
-                    TxtKeyValue::ToUserId(to) => tx.to_user_id = Some(to),
-                    TxtKeyValue::Description(desk) => tx.description = Some(desk),
-                    TxtKeyValue::Status(status) => tx.status = Some(status),
-                    TxtKeyValue::Timestamp(ts) => tx.timestamp = Some(ts),
+                    TxtKeyValue::TxId(id) => set_once(&mut tx.tx_id, id, "TX_ID")?,
+                    TxtKeyValue::TxType(tx_type) => set_once(&mut tx.tx_type, tx_type, "TX_TYPE")?,
+                    TxtKeyValue::Amount(amount) => set_once(&mut tx.amount, amount, "AMOUNT")?,
+                    TxtKeyValue::FromUserId(from) => {
+                        set_once(&mut tx.from_user_id, from, "FRPM_USER_ID")?
+                    }
+                    TxtKeyValue::ToUserId(to) => set_once(&mut tx.to_user_id, to, "TO_USER_ID")?,
+                    TxtKeyValue::Description(desk) => {
+                        set_once(&mut tx.description, desk, "Description")?
+                    }
+                    TxtKeyValue::Status(status) => set_once(&mut tx.status, status, "Status")?,
+                    TxtKeyValue::Timestamp(ts) => set_once(&mut tx.timestamp, ts, "Timestamp")?,
                 },
                 TxtLineType::Empty => {
                     if !tx.is_empty() {
@@ -407,6 +421,28 @@ STATUS: SUCCESS\n\
 DESCRIPTION: \"Terminal deposit\"\n\n"
         );
     }
-}
 
-// DESCRIPTION: "Terminal deposit"
+    #[test]
+    fn test_load_txt_duplicate_field() {
+        let input = r#"
+TX_ID: 123
+TX_ID: 456
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 789
+AMOUNT: 1000
+TIMESTAMP: 111111
+STATUS: SUCCESS
+DESCRIPTION: "Terminal deposit"
+"#;
+
+        let result = YPBankTxtFormat::load(input.as_bytes());
+
+        match result {
+            Err(ParserError::Txt(TxtError::DuplicateField { field })) => {
+                assert_eq!(field, "TX_ID");
+            }
+            _ => panic!("ожидали TxtError::DuplicateField"),
+        }
+    }
+}

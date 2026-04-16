@@ -40,8 +40,6 @@ impl std::str::FromStr for TxType {
     }
 }
 
-
-
 /// Статус банковской операции
 #[derive(Debug, PartialEq)]
 pub enum Status {
@@ -76,7 +74,6 @@ impl std::fmt::Display for Status {
     }
 }
 
-
 /// Банковская операция (данные)
 #[derive(Debug, PartialEq)]
 pub struct YPBankRecord {
@@ -94,7 +91,6 @@ pub struct YPBankRecord {
 pub trait FormatReader {
     fn load<R: std::io::Read>(reader: R) -> Result<Vec<YPBankRecord>, ParserError>;
 }
-
 
 /// Универсальный интерфейс записи банковских операций из формата
 pub trait FormatWriter {

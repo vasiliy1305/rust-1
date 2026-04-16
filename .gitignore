@@ -1,6 +1,2 @@
-/target/
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-*.log
+/target
+**/target

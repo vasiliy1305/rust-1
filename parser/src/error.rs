@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-
 /// Общие ошибки для всех форматов
 #[derive(Debug, Error)]
 pub enum ParserError {
@@ -19,7 +18,6 @@ pub enum ParserError {
     #[error("Rarce From Utf Error: {0}")]
     UTF(#[from] std::string::FromUtf8Error),
 }
-
 
 /// ошибки специфичные для CSV формата
 #[derive(Debug, Error)]
@@ -50,7 +48,6 @@ pub enum CsvError {
     UnclosedQuotedField { line: String },
 }
 
-
 /// ошибки специфичные для TXT формата
 #[derive(Debug, Error)]
 pub enum TxtError {
@@ -71,8 +68,10 @@ pub enum TxtError {
 
     #[error("MissingField field = '{field}'")]
     MissingField { field: String },
-}
 
+    #[error("Duplicate field = '{field}'")]
+    DuplicateField { field: String },
+}
 
 /// ошибки специфичные для Binary формата
 #[derive(Debug, Error)]

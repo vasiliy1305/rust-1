@@ -105,13 +105,25 @@ fn read_u8<R: std::io::Read>(reader: &mut R) -> Result<u8, std::io::Error> {
 fn try_read_header<R: std::io::Read>(reader: &mut R) -> Result<Option<u32>, ParserError> {
     let mut magic_buf = [0u8; 4];
 
-    match reader.read_exact(&mut magic_buf) {
-        Ok(()) => {}
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-            return Ok(None);
-        }
-        Err(e) => return Err(e.into()),
+    let byte_reded = reader.read(&mut magic_buf)?;
+    if byte_reded == 0 {
+        return Ok(None);
     }
+
+    if byte_reded < 4 {
+        return Err(ParserError::Bin(BinError::Io(std::io::Error::new(
+            std::io::ErrorKind::UnexpectedEof,
+            "incomplete MAGIC header",
+        ))));
+    }
+
+    // match reader.read_exact(&mut magic_buf) {
+    //     Ok(()) => {}
+    //     Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+    //         return Ok(None);
+    //     }
+    //     Err(e) => return Err(e.into()),
+    // }
 
     let magic = u32::from_be_bytes(magic_buf);
     if magic != MAGIC_U32 {
