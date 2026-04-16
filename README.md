@@ -17,7 +17,7 @@ C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example.csv
 C:/Users/Admin/Desktop/RUST/rust-1/file_examples/records_example.txt
 ---
 
-
+Проверки
 
 csv -> txt
 cmd /c "cargo run --manifest-path .\parser\Cargo.toml --quiet --bin ypbank_converter -- --input .\file_examples\records_example.csv --input-format csv --output-format txt > .\file_examples\temp\out.txt"
