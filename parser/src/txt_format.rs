@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 
 use crate::error::{ParserError, TxtError};
-use crate::utils::{parse_description, format_description};
+use crate::utils::{format_description, parse_description};
 use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
 
 pub struct YPBankTxtFormat;
@@ -101,13 +101,12 @@ impl FormatReader for YPBankTxtFormat {
     }
 }
 
-
 impl FormatWriter for YPBankTxtFormat {
     fn save<W: std::io::Write>(writer: &mut W, data: &[YPBankRecord]) -> Result<(), ParserError> {
         for tx in data {
             writeln!(
                 writer,
-                "TX_ID: {}\nTX_TYPE: {}\nFROM_USER_ID: {}\nTO_USER_ID: {}\nAMOUNT: {}\nTIMESTAMP: {}\nSTATUS: {}\nDESCRIPTION: \"{}\"\n",
+                "TX_ID: {}\nTX_TYPE: {}\nFROM_USER_ID: {}\nTO_USER_ID: {}\nAMOUNT: {}\nTIMESTAMP: {}\nSTATUS: {}\nDESCRIPTION: {}\n",
                 tx.tx_id,
                 tx.tx_type,
                 tx.from_user_id,
@@ -295,6 +294,117 @@ mod test {
         assert_eq!(
             line.unwrap(),
             TxtLineType::Data(TxtKeyValue::Status(Status::SUCCESS))
+        );
+    }
+
+    #[test]
+    fn test_get_line_type_wrong_key() {
+        let result = get_line_type("BAD_KEY: 123");
+
+        match result {
+            Err(TxtError::WrongKey { key }) => {
+                assert_eq!(key, "BAD_KEY");
+            }
+            _ => panic!("ожидали TxtError::WrongKey"),
+        }
+    }
+
+    #[test]
+    fn test_get_line_type_wrong_parts() {
+        let result = get_line_type("TX_ID 123");
+
+        match result {
+            Err(TxtError::WrongPartsSize { expected, actual }) => {
+                assert_eq!(expected, 2);
+                assert_eq!(actual, 1);
+            }
+            _ => panic!("ожидали TxtError::WrongPartsSize"),
+        }
+    }
+
+    #[test]
+    fn test_load_txt_ok() {
+        let input = r#"
+# Record 1
+TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9876543210987654
+AMOUNT: 10000
+TIMESTAMP: 1633036800000
+STATUS: SUCCESS
+DESCRIPTION: "Terminal deposit"
+
+# Record 2
+TX_ID: 2312321321321321
+TX_TYPE: TRANSFER
+FROM_USER_ID: 1231231231231231
+TO_USER_ID: 9876543210987654
+AMOUNT: 1000
+TIMESTAMP: 1633056800000
+STATUS: FAILURE
+DESCRIPTION: "User transfer"
+"#;
+
+        let result = YPBankTxtFormat::load(input.as_bytes()).unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].tx_id, 1234567890123456);
+        assert_eq!(result[0].status, Status::SUCCESS);
+        assert_eq!(result[1].tx_type, TxType::TRANSFER);
+        assert_eq!(result[1].description, "User transfer");
+    }
+
+    #[test]
+    fn test_load_txt_missing_field() {
+        let input = r#"
+TX_ID: 1234567890123456
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9876543210987654
+AMOUNT: 10000
+TIMESTAMP: 1633036800000
+STATUS: SUCCESS
+"#;
+
+        let result = YPBankTxtFormat::load(input.as_bytes());
+
+        match result {
+            Err(ParserError::Txt(TxtError::MissingField { field })) => {
+                assert_eq!(field, "DESCRIPTION");
+            }
+            _ => panic!("ожидали TxtError::MissingField"),
+        }
+    }
+
+    #[test]
+    fn test_save_txt_ok() {
+        let data = vec![YPBankRecord {
+            tx_id: 123,
+            tx_type: TxType::DEPOSIT,
+            from_user_id: 0,
+            to_user_id: 456,
+            amount: 1000,
+            timestamp: 111111,
+            status: Status::SUCCESS,
+            description: "Terminal deposit".to_string(),
+        }];
+
+        let mut out = Vec::new();
+        YPBankTxtFormat::save(&mut out, &data).unwrap();
+
+        let output = String::from_utf8(out).unwrap();
+
+        assert_eq!(
+            output,
+            "TX_ID: 123\n\
+TX_TYPE: DEPOSIT\n\
+FROM_USER_ID: 0\n\
+TO_USER_ID: 456\n\
+AMOUNT: 1000\n\
+TIMESTAMP: 111111\n\
+STATUS: SUCCESS\n\
+DESCRIPTION: \"Terminal deposit\"\n\n"
         );
     }
 }

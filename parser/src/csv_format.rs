@@ -2,8 +2,11 @@ use std::io::{BufRead, BufReader};
 use std::str;
 
 use crate::error::{CsvError, ParserError};
-use crate::utils::{parse_description, format_description};
 use crate::{FormatReader, FormatWriter, Status, TxType, YPBankRecord};
+
+fn format_csv_description(value: &str) -> String {
+    format!("\"{}\"", value.replace('"', "\"\""))
+}
 
 const HEADER: [&str; 8] = [
     "TX_ID",
@@ -51,11 +54,9 @@ impl FormatWriter for YPBankCsvFormat {
     }
 }
 
-
-
 fn transaction_to_str(tx: &YPBankRecord) -> String {
     format!(
-        "{},{},{},{},{},{},{},\"{}\"", // не совсем хорошо так делать
+        "{},{},{},{},{},{},{},{}", // не совсем хорошо так делать
         tx.tx_id,
         tx.tx_type,
         tx.from_user_id,
@@ -63,7 +64,7 @@ fn transaction_to_str(tx: &YPBankRecord) -> String {
         tx.amount,
         tx.timestamp,
         tx.status,
-        format_description(&tx.description)
+        format_csv_description(&tx.description)
     )
 }
 
@@ -110,8 +111,7 @@ fn split_csv_line(line: &str) -> Result<Vec<String>, CsvError> {
                 }
             }
             ',' if !in_quotes => {
-                fields.push(current);
-                current = String::new();
+                fields.push(std::mem::take(&mut current));
             }
             _ => {
                 current.push(ch);
@@ -120,10 +120,8 @@ fn split_csv_line(line: &str) -> Result<Vec<String>, CsvError> {
     }
 
     if in_quotes {
-        return Err(CsvError::WrongColumn {
-            index: 7,
-            expected: "closed quoted string".to_string(),
-            actual: line.to_string(),
+        return Err(CsvError::UnclosedQuotedField {
+            line: line.to_string(),
         });
     }
 
@@ -169,7 +167,7 @@ fn parse_line(line: &str) -> Result<YPBankRecord, CsvError> {
         }
     };
 
-    let description = parse_description(&parts[7])?;
+    let description = parts[7].clone();
 
     Ok(YPBankRecord {
         tx_id,
@@ -295,6 +293,92 @@ mod tests {
         assert_eq!(
             transaction_to_str(&tx),
             r#"1,DEPOSIT,0,1,100,123,SUCCESS,"Payment for ""VIP"" client""#
+        );
+    }
+
+    #[test]
+    fn test_parse_line_invalid_tx_type() {
+        let result =
+            parse_line(r#"1001,UNKNOWN,0,501,50000,1672531200000,SUCCESS,"Initial funding""#);
+
+        match result {
+            Err(CsvError::InvalidTxType { value }) => {
+                assert_eq!(value, "UNKNOWN");
+            }
+            _ => panic!("ожидали CsvError::InvalidTxType"),
+        }
+    }
+
+    #[test]
+    fn test_parse_line_invalid_status() {
+        let result = parse_line(r#"1001,DEPOSIT,0,501,50000,1672531200000,DONE,"Initial funding""#);
+
+        match result {
+            Err(CsvError::InvalidStatus { value }) => {
+                assert_eq!(value, "DONE");
+            }
+            _ => panic!("ожидали CsvError::InvalidStatus"),
+        }
+    }
+
+    #[test]
+    #[test]
+    fn test_parse_line_invalid_description() {
+        let result = parse_line("1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,\"Initial funding");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_csv_ok() {
+        let input = r#"TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION
+1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding"
+1002,TRANSFER,501,502,15000,1672534800000,FAILURE,"Payment for services"
+"#;
+
+        let result = YPBankCsvFormat::load(input.as_bytes()).unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].tx_id, 1001);
+        assert_eq!(result[0].tx_type, TxType::DEPOSIT);
+        assert_eq!(result[1].status, Status::FAILURE);
+        assert_eq!(result[1].description, "Payment for services");
+    }
+
+    #[test]
+    fn test_load_csv_skips_empty_lines() {
+        let input = r#"TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION
+
+1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding"
+
+"#;
+
+        let result = YPBankCsvFormat::load(input.as_bytes()).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_save_csv_ok() {
+        let data = vec![YPBankRecord {
+            tx_id: 1001,
+            tx_type: TxType::DEPOSIT,
+            from_user_id: 0,
+            to_user_id: 501,
+            amount: 50000,
+            timestamp: 1672531200000,
+            status: Status::SUCCESS,
+            description: "Initial account funding".to_string(),
+        }];
+
+        let mut out = Vec::new();
+        YPBankCsvFormat::save(&mut out, &data).unwrap();
+
+        let output = String::from_utf8(out).unwrap();
+
+        assert_eq!(
+            output,
+            "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION\n\
+1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,\"Initial account funding\"\n"
         );
     }
 }

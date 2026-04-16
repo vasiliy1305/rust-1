@@ -16,7 +16,6 @@ pub enum ParserError {
 
     #[error("Rarce From Utf Error: {0}")]
     UTF(#[from] std::string::FromUtf8Error),
-
 }
 
 #[derive(Debug, Error)]
@@ -42,6 +41,9 @@ pub enum CsvError {
 
     #[error("parse int error: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
+
+    #[error("Unclosed quoted field in CSV line: {line}")]
+    UnclosedQuotedField { line: String },
 }
 
 #[derive(Debug, Error)]
@@ -57,7 +59,7 @@ pub enum TxtError {
 
     #[error("Description error: {0}")]
     Description(#[from] DescriptionError),
-    
+
     #[error("parse int error: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
 
@@ -89,7 +91,6 @@ pub enum BinError {
     #[error("Wrong record size: expected '{expected}', got '{actual}'")]
     WrongRecordSize { expected: u32, actual: u32 },
 }
-
 
 #[derive(Debug, Error)]
 pub enum DescriptionError {

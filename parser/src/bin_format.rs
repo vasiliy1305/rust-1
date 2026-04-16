@@ -144,7 +144,7 @@ fn read_body<R: std::io::Read>(
         1 => Status::FAILURE,
         2 => Status::PENDING,
         value => {
-            return Err(ParserError::Bin(BinError::WrongStatus {  value }));
+            return Err(ParserError::Bin(BinError::WrongStatus { value }));
         }
     };
     let desc_len = read_u32(reader)?;
@@ -170,4 +170,121 @@ fn read_body<R: std::io::Read>(
         status,
         description,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_record() -> YPBankRecord {
+        YPBankRecord {
+            tx_id: 1001,
+            tx_type: TxType::TRANSFER,
+            from_user_id: 501,
+            to_user_id: 502,
+            amount: 15000,
+            timestamp: 1672534800000,
+            status: Status::FAILURE,
+            description: "Payment".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_save_and_load_bin_roundtrip() {
+        let data = vec![sample_record()];
+
+        let mut out = Vec::new();
+        YPBankBinFormat::save(&mut out, &data).unwrap();
+
+        let loaded = YPBankBinFormat::load(out.as_slice()).unwrap();
+
+        assert_eq!(loaded, data);
+    }
+
+    #[test]
+    fn test_load_bin_wrong_magic() {
+        let bytes = vec![0, 0, 0, 0, 0, 0, 0, 0];
+        let result = YPBankBinFormat::load(bytes.as_slice());
+
+        match result {
+            Err(ParserError::Bin(BinError::WrongMagic)) => {}
+            _ => panic!("ожидали BinError::WrongMagic"),
+        }
+    }
+
+    #[test]
+    fn test_load_bin_wrong_tx_type() {
+        let mut bytes = Vec::new();
+
+        bytes.extend_from_slice(&MAGIC);
+        bytes.extend_from_slice(&(46u32).to_be_bytes());
+        bytes.extend_from_slice(&(1u64).to_be_bytes());
+        bytes.push(9);
+        bytes.extend_from_slice(&(0u64).to_be_bytes());
+        bytes.extend_from_slice(&(1u64).to_be_bytes());
+        bytes.extend_from_slice(&(100u64).to_be_bytes());
+        bytes.extend_from_slice(&(123u64).to_be_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(&(0u32).to_be_bytes());
+
+        let result = YPBankBinFormat::load(bytes.as_slice());
+
+        match result {
+            Err(ParserError::Bin(BinError::WrongTxType { value })) => {
+                assert_eq!(value, 9);
+            }
+            _ => panic!("ожидали BinError::WrongTxType"),
+        }
+    }
+
+    #[test]
+    fn test_load_bin_wrong_status() {
+        let mut bytes = Vec::new();
+
+        bytes.extend_from_slice(&MAGIC);
+        bytes.extend_from_slice(&(46u32).to_be_bytes());
+        bytes.extend_from_slice(&(1u64).to_be_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(&(0u64).to_be_bytes());
+        bytes.extend_from_slice(&(1u64).to_be_bytes());
+        bytes.extend_from_slice(&(100u64).to_be_bytes());
+        bytes.extend_from_slice(&(123u64).to_be_bytes());
+        bytes.push(9);
+        bytes.extend_from_slice(&(0u32).to_be_bytes());
+
+        let result = YPBankBinFormat::load(bytes.as_slice());
+
+        match result {
+            Err(ParserError::Bin(BinError::WrongStatus { value })) => {
+                assert_eq!(value, 9);
+            }
+            _ => panic!("ожидали BinError::WrongStatus"),
+        }
+    }
+
+    #[test]
+    fn test_load_bin_wrong_record_size() {
+        let mut bytes = Vec::new();
+
+        bytes.extend_from_slice(&MAGIC);
+        bytes.extend_from_slice(&(999u32).to_be_bytes());
+        bytes.extend_from_slice(&(1u64).to_be_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(&(0u64).to_be_bytes());
+        bytes.extend_from_slice(&(1u64).to_be_bytes());
+        bytes.extend_from_slice(&(100u64).to_be_bytes());
+        bytes.extend_from_slice(&(123u64).to_be_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(&(0u32).to_be_bytes());
+
+        let result = YPBankBinFormat::load(bytes.as_slice());
+
+        match result {
+            Err(ParserError::Bin(BinError::WrongRecordSize { expected, actual })) => {
+                assert_eq!(expected, 46);
+                assert_eq!(actual, 999);
+            }
+            _ => panic!("ожидали BinError::WrongRecordSize"),
+        }
+    }
 }
