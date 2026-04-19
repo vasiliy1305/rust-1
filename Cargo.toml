@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "ypbank_parser",
+    "ypbank_cli",
+]
+
+resolver = "2"
